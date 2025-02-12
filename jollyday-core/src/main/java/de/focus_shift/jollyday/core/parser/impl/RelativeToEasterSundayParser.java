@@ -7,6 +7,7 @@ import de.focus_shift.jollyday.core.parser.functions.CreateHoliday;
 import de.focus_shift.jollyday.core.parser.predicates.ValidLimitation;
 import de.focus_shift.jollyday.core.spi.Holidays;
 
+import java.time.Year;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
@@ -17,11 +18,11 @@ import static java.util.stream.Collectors.toList;
 public class RelativeToEasterSundayParser implements HolidayParser {
 
   @Override
-  public List<Holiday> parse(final int year, final Holidays holidays) {
+  public List<Holiday> parse(final Year year, final Holidays holidays) {
     return holidays.relativeToEasterSunday().stream()
       .filter(new ValidLimitation(year))
       .map(res -> new DescribedDateHolder(res, new CalculateEasterSunday(year).apply(res.chronology()).plus(res.days())))
-      .map(holder -> new CreateHoliday(holder.getDate()).apply(holder.getDescribed()))
+      .map(holder -> new CreateHoliday(holder.getActualDate()).apply(holder.getDescribed()))
       .collect(toList());
   }
 }

@@ -10,11 +10,14 @@ import de.focus_shift.jollyday.core.impl.JapaneseHolidayManager;
 import de.focus_shift.jollyday.core.util.CalendarUtil;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Locale;
@@ -23,8 +26,9 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static de.focus_shift.jollyday.core.HolidayCalendar.GERMANY;
-import static de.focus_shift.jollyday.core.HolidayType.OFFICIAL_HOLIDAY;
-import static de.focus_shift.jollyday.core.HolidayType.UNOFFICIAL_HOLIDAY;
+import static de.focus_shift.jollyday.core.HolidayCalendar.UNITED_STATES;
+import static de.focus_shift.jollyday.core.HolidayType.OBSERVANCE;
+import static de.focus_shift.jollyday.core.HolidayType.PUBLIC_HOLIDAY;
 import static de.focus_shift.jollyday.core.ManagerParameters.create;
 import static java.time.Month.APRIL;
 import static java.time.Month.AUGUST;
@@ -37,6 +41,8 @@ import static java.time.Month.SEPTEMBER;
 import static java.util.Calendar.DAY_OF_MONTH;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
+import static java.util.Locale.FRANCE;
+import static java.util.Locale.US;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -78,6 +84,187 @@ class HolidayManagerTest {
     test_days_l1_2.add(LocalDate.of(2010, DECEMBER, 16));
   }
 
+  private static Stream<Arguments> firstLevel() {
+    return Stream.of(
+      Arguments.of("level1_1", test_days_l1_1),
+      Arguments.of("level1_2", test_days_l1_2)
+    );
+  }
+
+  @Test
+  void ensureToInstantiateHolidayManagerImplementationBasedOnCountry() {
+    System.setProperty("de.focus_shift.jollyday.config.urls", "file:./src/test/resources/test.app.properties");
+
+    HolidayManager.setManagerCachingEnabled(false);
+    assertThat(HolidayManager.getInstance(create("test"))).isInstanceOf(JapaneseHolidayManager.class);
+    HolidayManager.setManagerCachingEnabled(true);
+
+    System.clearProperty("de.focus_shift.jollyday.config.urls");
+  }
+
+  @Test
+  void ensureIsHolidayMethodReturnsTrueFalseForCalendarChronology() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+
+    final Calendar calendar = Calendar.getInstance();
+    calendar.set(YEAR, 2010);
+    calendar.set(MONTH, Calendar.FEBRUARY);
+    calendar.set(DAY_OF_MONTH, 16);
+    assertThat(sut.isHoliday(calendar)).isFalse();
+
+    final Calendar calendar2 = Calendar.getInstance();
+    calendar2.set(YEAR, 2010);
+    calendar2.set(MONTH, Calendar.FEBRUARY);
+    calendar2.set(DAY_OF_MONTH, 17);
+    assertThat(sut.isHoliday(calendar2)).isTrue();
+  }
+
+  @Test
+  void ensureIsHolidayMethodReturnsTrueFalseForCalendarChronologyAndHolidayType() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+
+    final Calendar calendar = Calendar.getInstance();
+    calendar.set(YEAR, 2010);
+    calendar.set(MONTH, Calendar.JANUARY);
+    calendar.set(DAY_OF_MONTH, 4);
+    assertThat(sut.isHoliday(calendar, OBSERVANCE)).isTrue();
+    assertThat(sut.isHoliday(calendar, PUBLIC_HOLIDAY)).isFalse();
+  }
+
+  @Test
+  void ensureIsHolidayMethodReturnsTrueFalseForLocalDate() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    assertThat(sut.isHoliday(LocalDate.of(2010, 2, 16))).isFalse();
+    assertThat(sut.isHoliday(LocalDate.of(2010, 2, 17))).isTrue();
+  }
+
+  @Test
+  void ensureIsHolidayMethodReturnsTrueFalseForLocalDateWithHolidayType() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    assertThat(sut.isHoliday(LocalDate.of(2010, 1, 4), PUBLIC_HOLIDAY)).isFalse();
+    assertThat(sut.isHoliday(LocalDate.of(2010, 1, 4), OBSERVANCE)).isTrue();
+  }
+
+  @Test
+  void ensureToThrowIllegalStateExceptionIfCountryIsMissing() {
+    final ManagerParameter parameter = create("NoCountry");
+    assertThatThrownBy(() -> HolidayManager.getInstance(parameter))
+      .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void ensureBaseStructureCanBeTraversed() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final CalendarHierarchy calendarHierarchy = sut.getCalendarHierarchy();
+    assertThat(calendarHierarchy.getId()).isEqualTo("test");
+    assertThat(calendarHierarchy.getChildren()).hasSize(2);
+
+    for (CalendarHierarchy calendarHierarchyChild : calendarHierarchy.getChildren().values()) {
+      if ("level1_1".equalsIgnoreCase(calendarHierarchyChild.getId())) {
+        assertThat(calendarHierarchyChild.getChildren()).hasSize(1);
+      } else if ("level1_2".equalsIgnoreCase(calendarHierarchyChild.getId())) {
+        assertThat(calendarHierarchyChild.getChildren()).isEmpty();
+      }
+    }
+  }
+
+  @Test
+  void ensureHierarchyDescriptionsIsDefinedForAllHolidayCalendars() {
+    for (HolidayCalendar holidayCalendar : HolidayCalendar.values()) {
+      final HolidayManager sut = HolidayManager.getInstance(create(holidayCalendar));
+      assertNotUndefined(holidayCalendar, sut.getCalendarHierarchy());
+    }
+  }
+
+  private void assertNotUndefined(HolidayCalendar holidayCalendar, CalendarHierarchy calendarHierarchy) {
+    assertThat(calendarHierarchy.getDescription()).isNotEqualTo("undefined");
+    for (CalendarHierarchy calendarHierarchyChild : calendarHierarchy.getChildren().values()) {
+      assertNotUndefined(holidayCalendar, calendarHierarchyChild);
+    }
+  }
+
+  @Test
+  void ensureToRetrieveHolidaysFromBaseLevelHierarchy() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(Year.of(2010));
+    assertThat(holidays).isNotNull();
+    assertDates(test_days_base, holidays);
+  }
+
+  @Test
+  void ensureToRetrieveHolidaysByType() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(Year.of(2010), OBSERVANCE);
+    assertThat(holidays)
+      .containsOnly(new Holiday(LocalDate.of(2010, 1, 4), "", OBSERVANCE));
+  }
+
+  @ParameterizedTest
+  @MethodSource("firstLevel")
+  void ensureToRetrieveHolidaysFromFirstLevelHierarchies(final String firstLevelName, final Set<LocalDate> expectedHolidays) {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> actualHolidays = sut.getHolidays(Year.of(2010), firstLevelName);
+    assertThat(actualHolidays).isNotNull();
+    assertDates(expectedHolidays, actualHolidays);
+  }
+
+  @Test
+  void ensureToRetrieveHolidaysFromSecondLevelHierarchy() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(Year.of(2010), "level1_1", "level1_1_l2");
+    assertThat(holidays).isNotNull();
+    assertDates(test_days_l1_1_l2, holidays);
+  }
+
+  @Test
+  void testlevel1_2() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(Year.of(2010), "level1_2");
+    assertThat(holidays).isNotNull();
+    assertDates(test_days_l1_2, holidays);
+  }
+
+  @Test
+  void ensureToTestIntervalToRetrieveHolidays() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 31), "level1_2");
+    assertThat(holidays).isNotNull();
+    assertDates(Set.of(LocalDate.of(2010, 1, 4), LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 18)), holidays);
+  }
+
+  @Test
+  void ensureToTestIntervalToRetrieveHolidaysByType() {
+    final HolidayManager sut = HolidayManager.getInstance(create("test"));
+    final Set<Holiday> holidays = sut.getHolidays(LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 31), OBSERVANCE);
+    assertThat(holidays)
+      .containsOnly(new Holiday(LocalDate.of(2010, 1, 4), "", OBSERVANCE));
+  }
+
+  @Test
+  void ensureThatExceptionIsThrownOnSubConfigurationWithSameId() {
+    final ManagerParameter parameter = create("test_fail");
+    assertThatThrownBy(() -> HolidayManager.getInstance(parameter))
+      .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void ensureThatHolidayManagerCanBeInstantiatedWithValuesFromHolidayCalendar() {
+    final Set<String> supportedCalendarCodes = HolidayManager.getSupportedCalendarCodes();
+    for (String calendar : supportedCalendarCodes) {
+      final HolidayManager sut = HolidayManager.getInstance(create(calendar));
+      assertThat(sut).isNotNull();
+    }
+  }
+
+  private void assertDates(final Set<LocalDate> expectedHolidays, final Set<Holiday> holidays) {
+    for (final LocalDate localDate : expectedHolidays) {
+      if (!CalendarUtil.contains(holidays, localDate)) {
+        fail("Missing " + localDate + " in " + holidays);
+      }
+    }
+    assertThat(holidays).hasSameSizeAs(expectedHolidays);
+  }
+
   @Nested
   class Caching {
     @Test
@@ -115,6 +302,7 @@ class HolidayManagerTest {
     }
   }
 
+  @TestInstance(TestInstance.Lifecycle.PER_CLASS)
   @Nested
   class Instantiation {
 
@@ -124,6 +312,39 @@ class HolidayManagerTest {
       Locale.setDefault(Locale.CANADA);
       final HolidayManager sut = HolidayManager.getInstance();
       assertThat(sut.getManagerParameter().getDisplayName()).isEqualTo("ca");
+      Locale.setDefault(defaultLocale);
+    }
+
+    private Stream<Arguments> provideLocaleAndHolidayCalendar() {
+      return Stream.of(
+        Arguments.of(Locale.GERMANY, HolidayCalendar.GERMANY),
+        Arguments.of(Locale.FRANCE, HolidayCalendar.FRANCE)
+      );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideLocaleAndHolidayCalendar")
+    void ensureManagerAreEqualWithLocaleAndHolidayCalendarInstance(final Locale locale, final HolidayCalendar holidayCalendar) {
+      final Locale defaultLocale = Locale.getDefault();
+      Locale.setDefault(locale);
+      final HolidayManager defaultManager = HolidayManager.getInstance();
+      final HolidayManager countryManager = HolidayManager.getInstance(ManagerParameters.create(holidayCalendar));
+      assertThat(countryManager).isEqualTo(defaultManager);
+      Locale.setDefault(defaultLocale);
+    }
+
+    @ParameterizedTest
+    @EnumSource(HolidayCalendar.class)
+    void ensuresManagerIsDifferentWithDifferentDefaultLocales(final HolidayCalendar countryCalendar) {
+      final Locale defaultLocale = Locale.getDefault();
+      if (countryCalendar == UNITED_STATES) {
+        Locale.setDefault(FRANCE);
+      } else {
+        Locale.setDefault(US);
+      }
+      final HolidayManager defaultManager = HolidayManager.getInstance();
+      final HolidayManager countryManager = HolidayManager.getInstance(ManagerParameters.create(countryCalendar, null));
+      assertThat(countryManager).isNotEqualTo(defaultManager);
       Locale.setDefault(defaultLocale);
     }
 
@@ -142,186 +363,5 @@ class HolidayManagerTest {
       final HolidayManager sut = HolidayManager.getInstance(ManagerParameters.create(GERMANY));
       assertThat(sut.getManagerParameter().getDisplayName()).isEqualTo("de");
     }
-  }
-
-  @Test
-  void ensureToInstantiateHolidayManagerImplementationBasedOnCountry() {
-    System.setProperty("config.urls", "file:./src/test/resources/test.app.properties");
-
-    HolidayManager.setManagerCachingEnabled(false);
-    assertThat(HolidayManager.getInstance(create("test"))).isInstanceOf(JapaneseHolidayManager.class);
-    HolidayManager.setManagerCachingEnabled(true);
-
-    System.clearProperty("config.urls");
-  }
-
-  @Test
-  void ensureIsHolidayMethodReturnsTrueFalseForCalendarChronology() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-
-    final Calendar calendar = Calendar.getInstance();
-    calendar.set(YEAR, 2010);
-    calendar.set(MONTH, Calendar.FEBRUARY);
-    calendar.set(DAY_OF_MONTH, 16);
-    assertThat(sut.isHoliday(calendar)).isFalse();
-
-    final Calendar calendar2 = Calendar.getInstance();
-    calendar2.set(YEAR, 2010);
-    calendar2.set(MONTH, Calendar.FEBRUARY);
-    calendar2.set(DAY_OF_MONTH, 17);
-    assertThat(sut.isHoliday(calendar2)).isTrue();
-  }
-
-  @Test
-  void ensureIsHolidayMethodReturnsTrueFalseForCalendarChronologyAndHolidayType() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-
-    final Calendar calendar = Calendar.getInstance();
-    calendar.set(YEAR, 2010);
-    calendar.set(MONTH, Calendar.JANUARY);
-    calendar.set(DAY_OF_MONTH, 4);
-    assertThat(sut.isHoliday(calendar, UNOFFICIAL_HOLIDAY)).isTrue();
-    assertThat(sut.isHoliday(calendar, OFFICIAL_HOLIDAY)).isFalse();
-  }
-
-  @Test
-  void ensureIsHolidayMethodReturnsTrueFalseForLocalDate() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    assertThat(sut.isHoliday(LocalDate.of(2010, 2, 16))).isFalse();
-    assertThat(sut.isHoliday(LocalDate.of(2010, 2, 17))).isTrue();
-  }
-
-  @Test
-  void ensureIsHolidayMethodReturnsTrueFalseForLocalDateWithHolidayType() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    assertThat(sut.isHoliday(LocalDate.of(2010, 1, 4), OFFICIAL_HOLIDAY)).isFalse();
-    assertThat(sut.isHoliday(LocalDate.of(2010, 1, 4), UNOFFICIAL_HOLIDAY)).isTrue();
-  }
-
-  @Test
-  void ensureToThrowIllegalStateExceptionIfCountryIsMissing() {
-    final ManagerParameter parameter = create("NoCountry");
-    assertThatThrownBy(() -> HolidayManager.getInstance(parameter))
-      .isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
-  void ensureBaseStructureCanBeTraversed() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final CalendarHierarchy calendarHierarchy = sut.getCalendarHierarchy();
-    assertThat(calendarHierarchy.getId()).isEqualTo("test");
-    assertThat(calendarHierarchy.getChildren()).hasSize(2);
-
-    for (CalendarHierarchy calendarHierarchyChild : calendarHierarchy.getChildren().values()) {
-      if (calendarHierarchyChild.getId().equalsIgnoreCase("level1_1")) {
-        assertThat(calendarHierarchyChild.getChildren()).hasSize(1);
-      } else if (calendarHierarchyChild.getId().equalsIgnoreCase("level1_2")) {
-        assertThat(calendarHierarchyChild.getChildren()).isEmpty();
-      }
-    }
-  }
-
-  @Test
-  void ensureHierarchyDescriptionsIsDefinedForAllHolidayCalendars() {
-    for (HolidayCalendar holidayCalendar : HolidayCalendar.values()) {
-      final HolidayManager sut = HolidayManager.getInstance(create(holidayCalendar));
-      assertNotUndefined(holidayCalendar, sut.getCalendarHierarchy());
-    }
-  }
-
-  private void assertNotUndefined(HolidayCalendar holidayCalendar, CalendarHierarchy calendarHierarchy) {
-    assertThat(calendarHierarchy.getDescription()).isNotEqualTo("undefined");
-    for (CalendarHierarchy calendarHierarchyChild : calendarHierarchy.getChildren().values()) {
-      assertNotUndefined(holidayCalendar, calendarHierarchyChild);
-    }
-  }
-
-  @Test
-  void ensureToRetrieveHolidaysFromBaseLevelHierarchy() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(2010);
-    assertThat(holidays).isNotNull();
-    assertDates(test_days_base, holidays);
-  }
-
-  @Test
-  void ensureToRetrieveHolidaysByType() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(2010, UNOFFICIAL_HOLIDAY);
-    assertThat(holidays)
-      .containsOnly(new Holiday(LocalDate.of(2010, 1, 4), "", UNOFFICIAL_HOLIDAY));
-  }
-
-  private static Stream<Arguments> firstLevel() {
-    return Stream.of(
-      Arguments.of("level1_1", test_days_l1_1),
-      Arguments.of("level1_2", test_days_l1_2)
-    );
-  }
-
-  @ParameterizedTest
-  @MethodSource("firstLevel")
-  void ensureToRetrieveHolidaysFromFirstLevelHierarchies(final String firstLevelName, final Set<LocalDate> expectedHolidays) {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> actualHolidays = sut.getHolidays(2010, firstLevelName);
-    assertThat(actualHolidays).isNotNull();
-    assertDates(expectedHolidays, actualHolidays);
-  }
-
-  @Test
-  void ensureToRetrieveHolidaysFromSecondLevelHierarchy() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(2010, "level1_1", "level1_1_l2");
-    assertThat(holidays).isNotNull();
-    assertDates(test_days_l1_1_l2, holidays);
-  }
-
-  @Test
-  void testlevel1_2() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(2010, "level1_2");
-    assertThat(holidays).isNotNull();
-    assertDates(test_days_l1_2, holidays);
-  }
-
-  @Test
-  void ensureToTestIntervalToRetrieveHolidays() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 31), "level1_2");
-    assertThat(holidays).isNotNull();
-    assertDates(Set.of(LocalDate.of(2010, 1, 4), LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 18)), holidays);
-  }
-
-  @Test
-  void ensureToTestIntervalToRetrieveHolidaysByType() {
-    final HolidayManager sut = HolidayManager.getInstance(create("test"));
-    final Set<Holiday> holidays = sut.getHolidays(LocalDate.of(2010, 1, 1), LocalDate.of(2010, 1, 31), UNOFFICIAL_HOLIDAY);
-    assertThat(holidays)
-      .containsOnly(new Holiday(LocalDate.of(2010, 1, 4), "", UNOFFICIAL_HOLIDAY));
-  }
-
-  @Test
-  void ensureThatExceptionIsThrownOnSubConfigurationWithSameId() {
-    final ManagerParameter parameter = create("test_fail");
-    assertThatThrownBy(() -> HolidayManager.getInstance(parameter))
-      .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  void ensureThatHolidayManagerCanBeInstantiatedWithValuesFromHolidayCalendar() {
-    final Set<String> supportedCalendarCodes = HolidayManager.getSupportedCalendarCodes();
-    for (String calendar : supportedCalendarCodes) {
-      final HolidayManager sut = HolidayManager.getInstance(create(calendar));
-      assertThat(sut).isNotNull();
-    }
-  }
-
-  private void assertDates(final Set<LocalDate> expectedHolidays, final Set<Holiday> holidays) {
-    for (final LocalDate localDate : expectedHolidays) {
-      if (!CalendarUtil.contains(holidays, localDate)) {
-        fail("Missing " + localDate + " in " + holidays);
-      }
-    }
-    assertThat(holidays).hasSameSizeAs(expectedHolidays);
   }
 }

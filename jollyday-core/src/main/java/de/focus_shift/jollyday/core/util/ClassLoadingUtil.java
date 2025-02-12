@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
  * ClassLoadingUtil class.
  * </p>
  */
-public class ClassLoadingUtil {
+public final class ClassLoadingUtil {
 
   private ClassLoadingUtil() {
     // ok
@@ -36,12 +36,12 @@ public class ClassLoadingUtil {
   }
 
   /**
-   * Returns the current threads context classloader.
+   * Returns the classloader.
    *
-   * @return the current threads context classloader
-   * @see Thread#currentThread()
+   * @return the current classloader
+   * @see Class#getClassLoader()
    */
   public static ClassLoader getClassloader() {
-    return Thread.currentThread().getContextClassLoader();
+    return ClassLoadingUtil.class.getClassLoader();
   }
 }

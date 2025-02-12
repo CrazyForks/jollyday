@@ -5,6 +5,7 @@ import de.focus_shift.jollyday.core.HolidayType;
 import de.focus_shift.jollyday.core.util.CalendarUtil;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,14 +28,14 @@ public class JapaneseHolidayManager extends DefaultHolidayManager {
    * between each other than this day is also a holiday.
    */
   @Override
-  public Set<Holiday> getHolidays(final int year, final String... args) {
+  public Set<Holiday> getHolidays(final Year year, final String... args) {
     final Set<Holiday> holidays = super.getHolidays(year, args);
     final Set<Holiday> additionalHolidays = new HashSet<>();
     for (Holiday holiday : holidays) {
       final LocalDate twoDaysLater = holiday.getDate().plusDays(2);
       if (CalendarUtil.contains(holidays, twoDaysLater)) {
         final LocalDate bridgingDate = twoDaysLater.minusDays(1);
-        additionalHolidays.add(new Holiday(bridgingDate, BRIDGING_HOLIDAY_PROPERTIES_KEY, HolidayType.OFFICIAL_HOLIDAY));
+        additionalHolidays.add(new Holiday(bridgingDate, BRIDGING_HOLIDAY_PROPERTIES_KEY, HolidayType.PUBLIC_HOLIDAY));
       }
     }
     holidays.addAll(additionalHolidays);

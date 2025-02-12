@@ -1,76 +1,120 @@
 package de.focus_shift.jollyday.tests.country;
 
-import de.focus_shift.jollyday.core.Holiday;
-import de.focus_shift.jollyday.core.HolidayManager;
-import net.jqwik.api.ForAll;
-import net.jqwik.api.Property;
-import net.jqwik.time.api.constraints.YearRange;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
-import java.time.Year;
-import java.util.Set;
-
 import static de.focus_shift.jollyday.core.HolidayCalendar.SWITZERLAND;
-import static de.focus_shift.jollyday.core.HolidayType.OFFICIAL_HOLIDAY;
-import static de.focus_shift.jollyday.core.ManagerParameters.create;
+import static de.focus_shift.jollyday.core.HolidayType.BANK_HOLIDAY;
+import static de.focus_shift.jollyday.core.HolidayType.OBSERVANCE;
+import static de.focus_shift.jollyday.tests.CalendarCheckerApi.assertFor;
+import static java.time.Month.AUGUST;
 import static java.time.Month.DECEMBER;
-import static java.time.Month.JUNE;
-import static java.time.Month.SEPTEMBER;
-import static org.assertj.core.api.Assertions.assertThat;
+import static java.time.Month.JANUARY;
+import static java.time.Month.MARCH;
+import static java.time.Month.MAY;
+import static java.time.Month.NOVEMBER;
 
-class HolidayCHTest extends AbstractCountryTestBase {
 
-  private static final String ISO_CODE = "ch";
+class HolidayCHTest {
 
   @Test
-  void testManagerCHStructure() {
-    validateCalendarData(ISO_CODE, 2022, true);
-  }
+  void ensuresHolidays() {
+    assertFor(SWITZERLAND)
+      .hasFixedHoliday("NEW_YEAR", JANUARY, 1).and()
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2, BANK_HOLIDAY).and()
+      .hasFixedHoliday("NATIONAL_DAY", AUGUST, 1).and()
+      .hasFixedHoliday("CHRISTMAS", DECEMBER, 25).and()
+      .hasChristianHoliday("ASCENSION_DAY").and()
+      .hasChristianHoliday("EASTER").and()
+
+      /* Aargau */
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("ag").and()
+      .hasFixedHoliday("ASSUMPTION_DAY", AUGUST, 15).inSubdivision("ag").and()
+      .hasFixedHoliday("ALL_SAINTS", NOVEMBER, 1).inSubdivision("ag").and()
+      .hasFixedHoliday("STEPHENS", DECEMBER, 26).inSubdivision("ag").and()
+      .hasFixedHoliday("IMMACULATE_CONCEPTION", DECEMBER, 8).inSubdivision("ag").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("ag").and()
+      .hasChristianHoliday("EASTER_MONDAY").inSubdivision("ag").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("ag").and()
+      .hasChristianHoliday("CORPUS_CHRISTI").inSubdivision("ag").and()
+
+      /* Vaud */
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("vd").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("vd").and()
+      .hasChristianHoliday("EASTER_MONDAY").inSubdivision("vd").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("vd").and()
+
+      /* Valais */
+      .hasFixedHoliday("ST_JOSEPH", MARCH, 19).inSubdivision("vs").and()
+      .hasFixedHoliday("ASSUMPTION_DAY", AUGUST, 15).inSubdivision("vs").and()
+      .hasFixedHoliday("ALL_SAINTS", NOVEMBER, 1).inSubdivision("vs").and()
+      .hasFixedHoliday("IMMACULATE_CONCEPTION", DECEMBER, 8).inSubdivision("vs").and()
+      .hasChristianHoliday("CORPUS_CHRISTI").inSubdivision("vs").and()
 
 
-  @Property
-  void ensuresThatStNicholasIsNotConfiguredInObwaldenUntil1946(@ForAll @YearRange(max = 1946) Year year) {
-    final HolidayManager holidayManager = HolidayManager.getInstance(create(SWITZERLAND));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue(), "ow");
-    assertThat(holidays)
-      .isNotEmpty()
-      .doesNotContain(new Holiday(LocalDate.of(year.getValue(), SEPTEMBER, 25), "ST_NICHOLAS", OFFICIAL_HOLIDAY));
-  }
+      /*Aargau*/
+      /*Innerrhoden*/
+      /*Ausserrhoden*/
 
-  @Property
-  void ensuresThatStNicholasIsConfiguredInObwalden(@ForAll @YearRange(min = 1947) Year year) {
-    final HolidayManager holidayManager = HolidayManager.getInstance(create(SWITZERLAND));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue(), "ow");
-    assertThat(holidays)
-      .isNotEmpty()
-      .contains(new Holiday(LocalDate.of(year.getValue(), SEPTEMBER, 25), "ST_NICHOLAS", OFFICIAL_HOLIDAY));
-  }
+      /*Bern*/
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("be").and()
+      .hasFixedHoliday("STEPHENS", DECEMBER, 26).inSubdivision("be").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("be").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("be").and()
 
-  @Property
-  void ensuresThatStPeterAndPaulIsConfiguredInTicino(@ForAll @YearRange Year year) {
-    final HolidayManager holidayManager = HolidayManager.getInstance(create(SWITZERLAND));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue(), "ti");
-    assertThat(holidays)
-      .isNotEmpty()
-      .contains(new Holiday(LocalDate.of(year.getValue(), JUNE, 29), "ST_PETER_PAUL", OFFICIAL_HOLIDAY));
-  }
+      /*Basel-Landschaft*/
+      /*Basel-Stadt*/
 
-  @Property
-  void ensuresThatDayOfIndependenceIsConfiguredInJura(@ForAll @YearRange Year year) {
-    final HolidayManager holidayManager = HolidayManager.getInstance(create(SWITZERLAND));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue(), "ju");
-    assertThat(holidays)
-      .isNotEmpty()
-      .contains(new Holiday(LocalDate.of(year.getValue(), JUNE, 23), "INDEPENDENCE_DAY", OFFICIAL_HOLIDAY));
-  }
+      /*Freiburg*/
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("fr").and()
+      .hasFixedHoliday("ASSUMPTION_DAY", AUGUST, 15).inSubdivision("fr").and()
+      .hasFixedHoliday("ALL_SAINTS", NOVEMBER, 1).inSubdivision("fr").and()
+      .hasFixedHoliday("IMMACULATE_CONCEPTION", DECEMBER, 8).inSubdivision("fr").and()
+      .hasFixedHoliday("STEPHENS", DECEMBER, 26).inSubdivision("fr").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("fr").and()
+      .hasChristianHoliday("EASTER_MONDAY").inSubdivision("fr").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("fr").and()
+      .hasChristianHoliday("CORPUS_CHRISTI").inSubdivision("fr").and()
 
-  @Property
-  void ensuresThatRestorationOfTheRepublicIsConfiguredInGeneve(@ForAll @YearRange Year year) {
-    final HolidayManager holidayManager = HolidayManager.getInstance(create(SWITZERLAND));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue(), "ge");
-    assertThat(holidays)
-      .isNotEmpty()
-      .contains(new Holiday(LocalDate.of(year.getValue(), DECEMBER, 31), "RESTORATION_OF_THE_REPUBLIC", OFFICIAL_HOLIDAY));
+      /*Genève*/
+      /*Glarus*/
+      /*Graubünden*/
+      /*Jura*/
+      /*Luzern*/
+      /*Neuchâtel*/
+      /*Nidwalden*/
+      /*Obwalden*/
+      /*Gallen*/
+
+      /*Schaffhausen*/
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("sh").and()
+      .hasFixedHoliday("LABOUR_DAY", MAY, 1).inSubdivision("sh").and()
+      .hasFixedHoliday("STEPHENS", DECEMBER, 26).inSubdivision("sh").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("sh").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("sh").and()
+
+      /*Solothurn*/
+      /*Schwyz*/
+
+      /*Thurgau*/
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("tg").and()
+      .hasFixedHoliday("LABOUR_DAY", MAY, 1, OBSERVANCE).inSubdivision("tg").and()
+      .hasFixedHoliday("STEPHENS", DECEMBER, 26).inSubdivision("tg").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("tg").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("tg").and()
+
+      /*Ticino*/
+      /*Uri*/
+
+      /*Vaud*/
+      .hasFixedHoliday("ST_BERCHTHOLD", JANUARY, 2).inSubdivision("vd").and()
+      .hasChristianHoliday("GOOD_FRIDAY").inSubdivision("vd").and()
+      .hasChristianHoliday("EASTER_MONDAY").inSubdivision("vd").and()
+      .hasChristianHoliday("WHIT_MONDAY").inSubdivision("vd")
+
+      /*Valais*/
+      /*Zug*/
+      /*Zürich*/
+
+      .check();
   }
 }

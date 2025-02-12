@@ -1,7 +1,6 @@
 package de.focus_shift.jollyday.core;
 
 import de.focus_shift.jollyday.core.caching.Cache;
-import de.focus_shift.jollyday.core.caching.HolidayManagerValueHandler;
 import de.focus_shift.jollyday.core.configuration.ConfigurationProviderManager;
 import de.focus_shift.jollyday.core.datasource.ConfigurationServiceManager;
 import de.focus_shift.jollyday.core.parser.functions.CalendarToLocalDate;
@@ -12,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Calendar;
 import java.util.Properties;
 import java.util.Set;
@@ -47,17 +47,6 @@ public abstract class HolidayManager {
    */
   private static final ConfigurationServiceManager configurationServiceManager =
     new ConfigurationServiceManager(new LazyServiceLoaderCache<>(ConfigurationService.class));
-
-  /**
-   * Caches the instance based country specific holidays so that e.g.
-   * the created HolidayManager via
-   * {@code HolidayManager.getInstance(create("de"))} only contains the german holidays.
-   * <p>
-   * This is also the reason this cache is not static.
-   * If it was static all holidays over all holiday manager instances would be cached,
-   * but only the german holidays are important for the german holiday manager, so only save them.
-   */
-  private final Cache<Set<Holiday>> holidayCache = new Cache<>();
 
   /**
    * The datasource to get the holiday data from.
@@ -123,8 +112,10 @@ public abstract class HolidayManager {
   private static HolidayManager createManager(final ManagerParameter parameter) {
     LOG.debug("Creating HolidayManager for calendar '{}'. Caching enabled: {}", parameter, isManagerCachingEnabled());
     CONFIGURATION_MANAGER_PROVIDER.mergeConfigurationProperties(parameter);
+
     final String managerImplClassName = readManagerImplClassName(parameter);
-    final HolidayManagerValueHandler holidayManagerValueHandler = new HolidayManagerValueHandler(parameter, managerImplClassName, configurationServiceManager);
+    final String configurationServiceImplClassName = readConfigurationServiceImplClassName(parameter);
+    final HolidayManagerValueHandler holidayManagerValueHandler = new HolidayManagerValueHandler(parameter, managerImplClassName, configurationServiceImplClassName, configurationServiceManager);
     if (isManagerCachingEnabled()) {
       return HOLIDAY_MANAGER_CACHE.get(holidayManagerValueHandler);
     } else {
@@ -142,6 +133,20 @@ public abstract class HolidayManager {
     final String className = parameter.getManagerImplClassName();
     if (className == null) {
       throw new IllegalStateException("Missing configuration '" + ManagerParameter.MANAGER_IMPL_CLASS_PREFIX + "'. Cannot create manager.");
+    }
+    return className;
+  }
+
+  /**
+   * Reads the managers implementation class from the properties config file.
+   *
+   * @param parameter the parameter to read the manager implementation class from
+   * @return the manager implementation class name
+   */
+  private static String readConfigurationServiceImplClassName(final ManagerParameter parameter) {
+    final String className = parameter.getConfigurationServiceImplClassName();
+    if (className == null) {
+      throw new IllegalStateException("Missing configuration '" + ManagerParameter.CONFIGURATION_SERVICE_IMPL + "'. Cannot create configuration service.");
     }
     return className;
   }
@@ -223,27 +228,7 @@ public abstract class HolidayManager {
    * @return true if the given date is a holiday in the state/region and below, otherwise false
    */
   public boolean isHoliday(final LocalDate localDate, final HolidayType holidayType, final String... args) {
-
-    final StringBuilder keyBuilder = new StringBuilder();
-    keyBuilder.append(localDate.getYear());
-    for (String arg : args) {
-      keyBuilder.append("_");
-      keyBuilder.append(arg);
-    }
-
-    final Cache.ValueHandler<Set<Holiday>> valueHandler = new Cache.ValueHandler<>() {
-      @Override
-      public String getKey() {
-        return keyBuilder.toString();
-      }
-
-      @Override
-      public Set<Holiday> createValue() {
-        return getHolidays(localDate.getYear(), args);
-      }
-    };
-
-    final Set<Holiday> holidays = holidayCache.get(valueHandler);
+    final Set<Holiday> holidays = getHolidays(Year.of(localDate.getYear()), args);
     return CalendarUtil.contains(holidays, localDate, holidayType);
   }
 
@@ -291,7 +276,7 @@ public abstract class HolidayManager {
    * @param args i.e. args = {'ny'}. returns US/New York holidays. No args means holidays common to whole country
    * @return a set of holidays for the requested year
    */
-  public abstract Set<Holiday> getHolidays(final int year, final String... args);
+  public abstract Set<Holiday> getHolidays(final Year year, final String... args);
 
   /**
    * Returns the holidays for the requested year, the given {@link HolidayType} and the hierarchy structure
@@ -301,7 +286,7 @@ public abstract class HolidayManager {
    * @param args        i.e. args = {'ny'}. returns US/New York holidays. No args means holidays common to whole country
    * @return a set of holidays of the given {@link HolidayType} for the requested year
    */
-  public abstract Set<Holiday> getHolidays(final int year, final HolidayType holidayType, final String... args);
+  public abstract Set<Holiday> getHolidays(final Year year, final HolidayType holidayType, final String... args);
 
   /**
    * Returns the holidays for the requested interval and hierarchy structure.

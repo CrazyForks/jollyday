@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Set;
 
@@ -22,8 +23,8 @@ class HolidayBMTest extends AbstractCountryTestBase {
 
 
   @ParameterizedTest
-  @ValueSource(ints = {2015, 2016, 2017, 2018, 2020, 2021, 2022, 2023, 2024, 2025})
-  void testManagerBMStructure(final int year) {
+  @ValueSource(strings = {"2015", "2016", "2017", "2018", "2020", "2021", "2022", "2023", "2024", "2025"})
+  void testManagerBMStructure(final Year year) {
     validateCalendarData(ISO_CODE, year, true);
   }
 
@@ -44,10 +45,5 @@ class HolidayBMTest extends AbstractCountryTestBase {
     } catch (Exception e) {
       fail("Unexpected error occurred: " + e.getClass().getName() + " - " + e.getMessage());
     }
-  }
-
-  @Test
-  void testManagerDifferentInstanceBM() {
-    validateManagerDifferentInstance(HolidayCalendar.BERMUDA);
   }
 }

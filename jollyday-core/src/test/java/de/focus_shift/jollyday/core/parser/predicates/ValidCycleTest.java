@@ -2,7 +2,6 @@ package de.focus_shift.jollyday.core.parser.predicates;
 
 
 import de.focus_shift.jollyday.core.spi.Limited;
-import de.focus_shift.jollyday.core.spi.YearCycle;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.ForAll;
@@ -37,7 +36,7 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     assertThat(validCycle.test(limited)).isTrue();
   }
 
@@ -61,7 +60,7 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     if (year.getValue() % 2 != 0) {
       assertThat(validCycle.test(limited)).isTrue();
     } else {
@@ -89,7 +88,7 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     if (year.getValue() % 2 == 0) {
       assertThat(validCycle.test(limited)).isTrue();
     } else {
@@ -98,7 +97,7 @@ class ValidCycleTest {
   }
 
   @Property
-  void ensureLimitedWithCycleYearsWithValidFrom(@ForAll @YearRange(min = 1901) Year year, @ForAll("onlyYearBased") YearCycle cycle) {
+  void ensureLimitedWithCycleYearsWithValidFrom(@ForAll @YearRange(min = 1901) Year year, @ForAll("onlyYearBased") Limited.YearCycle cycle) {
 
     final int modulo = getModulo(cycle);
 
@@ -119,12 +118,12 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     assertThat(validCycle.test(limited)).isEqualTo(((year.getValue() - limited.validFrom().getValue()) % modulo) == 0);
   }
 
   @Property
-  void ensureLimitedForTwoYearReturnsTrueWithValidTo(@ForAll @YearRange(max = 2013) Year year, @ForAll("onlyYearBased") YearCycle cycle) {
+  void ensureLimitedForTwoYearReturnsTrueWithValidTo(@ForAll @YearRange(max = 2013) Year year, @ForAll("onlyYearBased") Limited.YearCycle cycle) {
 
     final int modulo = getModulo(cycle);
 
@@ -145,16 +144,16 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     assertThat(validCycle.test(limited)).isEqualTo(((limited.validTo().getValue() - year.getValue()) % modulo) == 0);
   }
 
   @Provide
-  Arbitrary<YearCycle> onlyYearBased() {
-    return Arbitraries.of(YearCycle.TWO_YEARS, YearCycle.THREE_YEARS, YearCycle.FOUR_YEARS, YearCycle.FIVE_YEARS, YearCycle.SIX_YEARS);
+  Arbitrary<Limited.YearCycle> onlyYearBased() {
+    return Arbitraries.of(Limited.YearCycle.TWO_YEARS, Limited.YearCycle.THREE_YEARS, Limited.YearCycle.FOUR_YEARS, Limited.YearCycle.FIVE_YEARS, Limited.YearCycle.SIX_YEARS);
   }
 
-  private static int getModulo(YearCycle cycle) {
+  private static int getModulo(Limited.YearCycle cycle) {
     int modulo = 0;
     switch (cycle) {
       case TWO_YEARS:
@@ -172,6 +171,8 @@ class ValidCycleTest {
       case SIX_YEARS:
         modulo = 6;
         break;
+      default:
+        throw new IllegalStateException("Unexpected value: " + cycle);
     }
     return modulo;
   }
@@ -196,7 +197,7 @@ class ValidCycleTest {
       }
     };
 
-    final ValidCycle validCycle = new ValidCycle(year.getValue());
+    final ValidCycle validCycle = new ValidCycle(year);
     final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
       () -> validCycle.test(limited)
     );

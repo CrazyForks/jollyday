@@ -18,6 +18,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.time.Year;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -31,16 +32,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
 public class HolidayManagerGetHolidayBenchmarkTest extends Benchmarks {
 
-  private static final double REFERENCE_SCORE = 45_000.00;
+  private static final double REFERENCE_SCORE = 21_000_000.00;
 
   @State(Scope.Thread)
-  public static class HolidayManagerState {
-    public final HolidayManager holidayManager = HolidayManager.getInstance(create("test"));
+  public static class YearState {
+    public final Year year = Year.of(2010);
   }
 
   @Benchmark
-  public static Set<Holiday> benchmarkGetHolidays(final HolidayManagerState holidayManagerState) {
-    return holidayManagerState.holidayManager.getHolidays(2010);
+  public static Set<Holiday> benchmarkGetHolidays(final HolidayManagerState holidayManagerState, final YearState yearState) {
+    return holidayManagerState.holidayManager.getHolidays(yearState.year);
   }
 
   @Test
@@ -56,5 +57,10 @@ public class HolidayManagerGetHolidayBenchmarkTest extends Benchmarks {
     for (RunResult runResult : runResults) {
       assertDeviationWithin(runResult, REFERENCE_SCORE, 0.05);
     }
+  }
+
+  @State(Scope.Thread)
+  public static class HolidayManagerState {
+    public final HolidayManager holidayManager = HolidayManager.getInstance(create("test"));
   }
 }

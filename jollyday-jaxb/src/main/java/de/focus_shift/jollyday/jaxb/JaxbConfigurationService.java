@@ -7,11 +7,18 @@ import de.focus_shift.jollyday.core.spi.ConfigurationService;
 import java.io.InputStream;
 import java.net.URL;
 
-
+/**
+ * see {@link ConfigurationService}
+ */
 public class JaxbConfigurationService implements ConfigurationService {
 
-  private final XMLUtil xmlUtil = new XMLUtil();
+  private static final JaxbXMLMapper xmlUtil = new JaxbXMLMapper();
 
+  /**
+   * {@inheritDoc}
+   *
+   * @return {@inheritDoc}
+   */
   @Override
   public Configuration getConfiguration(ManagerParameter parameter) {
     final URL resourceUrl = parameter.createResourceUrl();

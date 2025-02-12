@@ -13,7 +13,7 @@ import java.time.Year;
 import java.util.Set;
 
 import static de.focus_shift.jollyday.core.HolidayCalendar.SERBIA;
-import static de.focus_shift.jollyday.core.HolidayType.OFFICIAL_HOLIDAY;
+import static de.focus_shift.jollyday.core.HolidayType.PUBLIC_HOLIDAY;
 import static de.focus_shift.jollyday.core.ManagerParameters.create;
 import static java.time.DayOfWeek.SUNDAY;
 import static java.time.Month.FEBRUARY;
@@ -23,68 +23,68 @@ import static java.time.Month.NOVEMBER;
 import static java.time.temporal.ChronoField.DAY_OF_WEEK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class HolidayRSTest extends AbstractCountryTestBase {
+class HolidayRSTest {
 
   @Property
   void ensuresThatNewYearFirstIsConfiguredAndIfOnSundayMovesToMondayAndTuesday(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
 
     final LocalDate firstNewYear = LocalDate.of(year.getValue(), JANUARY, 1);
     final LocalDate secondNewYear = LocalDate.of(year.getValue(), JANUARY, 2);
-    checkSundayMovingToNextWorkday(holidays, firstNewYear, secondNewYear, "NEW_YEAR", OFFICIAL_HOLIDAY);
+    checkSundayMovingToNextWorkday(holidays, firstNewYear, secondNewYear, "NEW_YEAR", PUBLIC_HOLIDAY);
   }
 
   @Property
   void ensuresThatStateHoodIsConfiguredAndIfOnSundayMovesToMondayAndTuesday(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
 
     final LocalDate firstStateHood = LocalDate.of(year.getValue(), FEBRUARY, 15);
     final LocalDate secondStateHood = LocalDate.of(year.getValue(), FEBRUARY, 16);
-    checkSundayMovingToNextWorkday(holidays, firstStateHood, secondStateHood, "STATEHOOD", OFFICIAL_HOLIDAY);
+    checkSundayMovingToNextWorkday(holidays, firstStateHood, secondStateHood, "STATEHOOD", PUBLIC_HOLIDAY);
   }
 
   @Property
   void ensuresThatLabourDayIsConfiguredAndIfOnSundayMovesToMondayAndTuesday(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
 
     final LocalDate firstLabourDay = LocalDate.of(year.getValue(), MAY, 1);
     final LocalDate secondLabourDay = LocalDate.of(year.getValue(), MAY, 2);
-    checkSundayMovingToNextWorkday(holidays, firstLabourDay, secondLabourDay, "LABOUR_DAY", OFFICIAL_HOLIDAY);
+    checkSundayMovingToNextWorkday(holidays, firstLabourDay, secondLabourDay, "LABOUR_DAY", PUBLIC_HOLIDAY);
   }
 
   @Property
   void ensuresThatArmisticeIsConfiguredAndIfOnSundayMovesToMonday(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
 
     final LocalDate armistice = LocalDate.of(year.getValue(), NOVEMBER, 11);
     if (isSunday(armistice)) {
       assertThat(holidays)
         .isNotEmpty()
-        .contains(new Holiday(LocalDate.of(year.getValue(), NOVEMBER, 12), "ARMISTICE", OFFICIAL_HOLIDAY));
+        .contains(new Holiday(LocalDate.of(year.getValue(), NOVEMBER, 12), "ARMISTICE", PUBLIC_HOLIDAY));
     } else {
       assertThat(holidays)
         .isNotEmpty()
-        .contains(new Holiday(LocalDate.of(year.getValue(), NOVEMBER, 11), "ARMISTICE", OFFICIAL_HOLIDAY));
+        .contains(new Holiday(LocalDate.of(year.getValue(), NOVEMBER, 11), "ARMISTICE", PUBLIC_HOLIDAY));
     }
   }
 
   @Property
   void ensuresThatOrthodoxChristmasIsConfigured(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
     assertThat(holidays)
       .isNotEmpty()
-      .contains(new Holiday(LocalDate.of(year.getValue(), JANUARY, 7), "CHRISTMAS", OFFICIAL_HOLIDAY));
+      .contains(new Holiday(LocalDate.of(year.getValue(), JANUARY, 7), "CHRISTMAS", PUBLIC_HOLIDAY));
   }
 
   @Property
   void ensuresThatEasterIsConfigured(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
     assertThat(holidays)
       .isNotEmpty()
       .extracting(Holiday::getPropertiesKey)
@@ -94,7 +94,7 @@ class HolidayRSTest extends AbstractCountryTestBase {
   @Property
   void ensuresThatGoodFridayIsConfigured(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
     assertThat(holidays)
       .isNotEmpty()
       .extracting(Holiday::getPropertiesKey)
@@ -104,7 +104,7 @@ class HolidayRSTest extends AbstractCountryTestBase {
   @Property
   void ensuresThatEasterMondayIsConfigured(@ForAll @YearRange Year year) {
     final HolidayManager holidayManager = HolidayManager.getInstance(create(SERBIA));
-    final Set<Holiday> holidays = holidayManager.getHolidays(year.getValue());
+    final Set<Holiday> holidays = holidayManager.getHolidays(year);
     assertThat(holidays)
       .isNotEmpty()
       .extracting(Holiday::getPropertiesKey)

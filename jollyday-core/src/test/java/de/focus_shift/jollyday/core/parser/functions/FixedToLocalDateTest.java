@@ -2,8 +2,6 @@ package de.focus_shift.jollyday.core.parser.functions;
 
 import de.focus_shift.jollyday.core.HolidayType;
 import de.focus_shift.jollyday.core.spi.Fixed;
-import de.focus_shift.jollyday.core.spi.MovingCondition;
-import de.focus_shift.jollyday.core.spi.YearCycle;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -51,12 +49,12 @@ class FixedToLocalDateTest {
       }
 
       @Override
-      public HolidayType officiality() {
+      public HolidayType holidayType() {
         return null;
       }
     };
 
-    final LocalDate localDate = new FixedToLocalDate(2024).apply(fixed);
+    final LocalDate localDate = new FixedToLocalDate(Year.of(2024)).apply(fixed);
     assertThat(localDate)
       .hasYear(2024)
       .hasMonth(FEBRUARY)
